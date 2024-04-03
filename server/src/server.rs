@@ -49,15 +49,19 @@ async fn handle_connection(
 
     loop {
         // Read a frame from the WebSocket connection
-        let frame = websocket.read_frame().await?;
+        let msg = websocket.read_frame().await?;
 
-        log::info!("Received frame: {:?}", frame.payload);
+        match msg.opcode {
+            fastwebsockets::OpCode::Binary => {
+                let bytes = msg.payload.to_owned();
+                let payload: xyncer_share::Payload = rmp_serde::from_slice(&bytes).unwrap();
 
-        match frame.opcode {
-            fastwebsockets::OpCode::Close => break,
-            fastwebsockets::OpCode::Text | fastwebsockets::OpCode::Binary => {
+                log::info!("Received payload: {:?}", payload);
+            }
+            fastwebsockets::OpCode::Text => {
                 unimplemented!();
             }
+            fastwebsockets::OpCode::Close => break,
             _ => {}
         }
     }

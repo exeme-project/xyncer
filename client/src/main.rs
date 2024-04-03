@@ -1,25 +1,27 @@
-use eframe::egui;
 use simple_logger;
 
 mod client;
 mod session;
-mod ui;
 
 #[tokio::main]
-async fn main() -> Result<(), eframe::Error> {
+async fn main() {
     simple_logger::SimpleLogger::new()
         .with_level(log::LevelFilter::Info)
         .init()
         .unwrap();
 
-    let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([320.0, 240.0]),
-        ..Default::default()
+    let (payload_sender, payload_receiver) =
+        tokio::sync::mpsc::channel::<xyncer_share::Payload>(100);
+
+    let session = session::Session {
+        authenticated: false,
+        connected: false,
+        error: anyhow::Error::msg(""),
+        password: String::new(),
+        payload_sender: payload_sender,
+        payload_receiver: payload_receiver,
+        server_address: String::from("127.0.0.1:8080"),
     };
 
-    eframe::run_native(
-        "Xyncer",
-        options,
-        Box::new(|_cc| Box::<ui::Xyncer>::default()),
-    )
+    client::start_client(session).await.unwrap();
 }

@@ -10,6 +10,7 @@ axum = "0.7.5"
 fastwebsockets = { version = "0.7.1", features = ["upgrade", "with_axum"] }
 log = "0.4.21"
 rand = "0.8.5"
+rmp-serde = "1.1.2"
 serde = "1.0.197"
 simple_logger = "4.3.3"
 tokio = { version = "1.37.0", features = ["full"] }

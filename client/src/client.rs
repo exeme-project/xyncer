@@ -1,4 +1,4 @@
-use std::{future::Future, io::Read};
+use std::future::Future;
 
 use anyhow;
 use bytes;
@@ -54,49 +54,59 @@ async fn connect(
     Ok(fastwebsockets::FragmentCollector::new(ws))
 }
 
-pub async fn start_client(
-    server_url: &str,
-    session: Arc<Mutex<session::Session>>,
-) -> anyhow::Result<()> {
-    let mut websocket = connect(server_url).await?;
+pub async fn start_client(session: session::Session) -> anyhow::Result<()> {
+    let mut websocket = connect(&session.server_address).await?;
 
-    {
-        let mut session_guard = session.lock().unwrap(); // Acquire the lock on the session.
+    let mut session = session;
 
-        session_guard.connected = true;
-        session_guard.error = anyhow::Error::msg("");
-    } // The lock is automatically released here as session_guard goes out of scope.
+    session.connected = true;
+    session.error = anyhow::Error::msg("");
 
-    tokio::spawn(async move {
-        loop {
-            let msg = websocket.read_frame().await.map_err(anyhow::Error::new)?;
+    loop {
+        tokio::select! {
+            // Handling incoming WebSocket messages
+            msg = websocket.read_frame() => {
+                let msg = msg.map_err(anyhow::Error::new)?;
 
-            match msg.opcode {
-                fastwebsockets::OpCode::Binary => {
-                    let bytes = msg.payload.to_owned();
-                    let payload: xyncer_share::Payload = rmp_serde::from_slice(&bytes).unwrap();
+                match msg.opcode {
+                    fastwebsockets::OpCode::Binary => {
+                        let bytes = msg.payload.to_owned();
+                        let payload: xyncer_share::Payload = rmp_serde::from_slice(&bytes).unwrap();
 
-                    log::info!("Received payload: {:?}", payload);
+                        log::info!("Received payload: {:?}", payload);
 
-                    match payload.op_code {
-                        xyncer_share::OP::Hello => {}
-                        _ => {
-                            unimplemented!();
+                        match payload.op_code {
+                            xyncer_share::OP::Hello => {
+                                xyncer_share::send_payload(
+                                    &mut websocket,
+                                    xyncer_share::Payload {
+                                        op_code: xyncer_share::OP::Identify,
+                                        event_name: xyncer_share::Event::None,
+                                        data: xyncer_share::payloads::PayloadData::Identify(
+                                            xyncer_share::payloads::IdentifyData {
+                                                passphrase: String::from("password"),
+                                            },
+                                        ),
+                                    },
+                                )
+                                .await?;
+                            }
+                            _ => {
+                                unimplemented!();
+                            }
                         }
                     }
+                    fastwebsockets::OpCode::Close => {
+                        break;
+                    }
+                    _ => unimplemented!(),
                 }
-                fastwebsockets::OpCode::Text => {
-                    unimplemented!();
-                }
-                fastwebsockets::OpCode::Close => {
-                    break;
-                }
-                _ => {}
+            },
+            Some(payload) = session.payload_receiver.recv() => {
+                xyncer_share::send_payload(&mut websocket, payload).await?;
             }
         }
-
-        Ok::<(), anyhow::Error>(())
-    });
+    }
 
     Ok(())
 }
