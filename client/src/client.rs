@@ -5,7 +5,9 @@ use fastwebsockets;
 use http_body_util;
 use hyper;
 use hyper_util;
+use std::sync::Arc;
 use tokio;
+use tokio::sync::RwLock;
 
 use crate::session;
 use xyncer_share::{self, Websocket};
@@ -54,12 +56,22 @@ async fn connect(
 }
 
 pub async fn start_client(
-    mut session_data: session::Session,
+    session_data_guard: Arc<RwLock<session::Session>>,
+    payload_receiver: flume::Receiver<xyncer_share::Payload>,
+    payload_sender: flume::Sender<xyncer_share::Payload>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    // Obtain a write lock on the session data
+    let mut session_data = session_data_guard.write().await;
+
+    // Connect to the WebSocket server
     let mut websocket = connect(&session_data.server_address).await?;
 
+    // Update the session data
     session_data.connected = true;
     session_data.error = None;
+
+    // Drop the write lock on the session data
+    drop(session_data);
 
     loop {
         tokio::select! {
@@ -86,21 +98,30 @@ pub async fn start_client(
                                         }
                                     };
 
-                                    let session_data = session_data.clone();
+                                    let payload_sender_cloned = payload_sender.clone();
+                                    let session_data_guard_cloned = session_data_guard.clone();
 
                                     tokio::spawn(async move {
-                                        loop {
-                                            tokio::time::sleep(tokio::time::Duration::from_secs(heartbeat_interval.into())).await;
+                                        let session_data = session_data_guard_cloned.read().await;
 
-                                            if session_data.connected {
-                                                session_data.payload_sender.send(xyncer_share::Payload {
-                                                    op_code: xyncer_share::OP::Heartbeat,
-                                                    event_name: xyncer_share::Event::None,
-                                                    data: xyncer_share::payloads::PayloadData::Heartbeat,
-                                                }).unwrap();
-                                            } else {
+                                        loop {
+                                            if !session_data.connected {
+                                                log::info!("Stopping heartbeat (not connected)");
+
                                                 break;
                                             }
+
+                                            if let Err(e) = payload_sender_cloned.send(xyncer_share::Payload {
+                                                op_code: xyncer_share::OP::Heartbeat,
+                                                event_name: xyncer_share::Event::None,
+                                                data: xyncer_share::payloads::PayloadData::Heartbeat,
+                                            }) {
+                                                log::error!("Error sending heartbeat (stopping): {}", e);
+
+                                                break;
+                                            }
+
+                                            tokio::time::sleep(tokio::time::Duration::from_secs(heartbeat_interval.into())).await;
                                         }
                                     });
                                 }
@@ -116,7 +137,7 @@ pub async fn start_client(
                     }
                 },
                 // Handle outgoing WebSocket messages
-                payload_result = session_data.payload_receiver.recv_async() => {
+                payload_result = payload_receiver.recv_async() => {
                     match payload_result {
                         Ok(payload) => {
                             if let Err(e) = websocket.send_payload(payload).await {

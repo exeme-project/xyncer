@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
 
 // Dispatch data
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct DispatchData {
     pub data: String,
 }
 
 // Identify data
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct IdentifyData {
     pub passphrase: String,
 }
@@ -57,7 +57,7 @@ impl ErrorCode {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct InvalidSessionData {
     code: ErrorCode,
     description: String,
@@ -66,13 +66,13 @@ pub struct InvalidSessionData {
 }
 
 // Hello data
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HelloData {
     pub heartbeat_interval: u8,
 }
 
 // WebSocket payload data
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum PayloadData {
     Dispatch(DispatchData),
     Heartbeat,

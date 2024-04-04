@@ -30,7 +30,7 @@ impl Websocket
 }
 
 // WebSocket OP codes, in order of most common. Comments show client action and description.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum OP {
     Dispatch,       // Receive | An event was dispatched
     Heartbeat,      // Send / Receive | Keeps the connection alive
@@ -42,14 +42,14 @@ pub enum OP {
 }
 
 // WebSocket events
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Event {
     None,
     Ready,
 }
 
 // WebSocket payload
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Payload {
     pub op_code: OP,
     pub event_name: Event,
