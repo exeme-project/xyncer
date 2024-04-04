@@ -6,19 +6,27 @@ use serde::{Deserialize, Serialize};
 
 pub mod payloads;
 
-pub async fn send_payload(
-    websocket: &mut fastwebsockets::FragmentCollector<
-        hyper_util::rt::TokioIo<hyper::upgrade::Upgraded>,
-    >,
-    payload: Payload,
-) -> Result<(), fastwebsockets::WebSocketError> {
-    log::info!("Sent payload: {:?}", payload);
+pub trait Websocket {
+    async fn send_payload(
+        &mut self,
+        payload: Payload,
+    ) -> Result<(), fastwebsockets::WebSocketError>;
+}
 
-    websocket
-        .write_frame(fastwebsockets::Frame::binary(
+impl Websocket
+    for fastwebsockets::FragmentCollector<hyper_util::rt::TokioIo<hyper::upgrade::Upgraded>>
+{
+    async fn send_payload(
+        &mut self,
+        payload: Payload,
+    ) -> Result<(), fastwebsockets::WebSocketError> {
+        log::info!("Sent payload: {:?}", payload);
+
+        self.write_frame(fastwebsockets::Frame::binary(
             fastwebsockets::Payload::Owned(rmp_serde::to_vec(&payload).unwrap()),
         ))
         .await
+    }
 }
 
 // WebSocket OP codes, in order of most common. Comments show client action and description.

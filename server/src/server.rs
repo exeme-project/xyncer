@@ -5,7 +5,7 @@ use std::net::SocketAddr;
 use tokio;
 
 use crate::session;
-use xyncer_share;
+use xyncer_share::{self, Websocket};
 
 // Run the WebSocket server
 pub async fn start_server(ip: &str, port: u16) -> Result<(), std::io::Error> {
@@ -35,17 +35,15 @@ async fn handle_connection(
     // Create a new WebSocket connection
     let mut websocket = fastwebsockets::FragmentCollector::new(future.await?);
 
-    xyncer_share::send_payload(
-        &mut websocket,
-        xyncer_share::Payload {
+    websocket
+        .send_payload(xyncer_share::Payload {
             op_code: xyncer_share::OP::Hello,
             event_name: xyncer_share::Event::None,
             data: xyncer_share::payloads::PayloadData::Hello(xyncer_share::payloads::HelloData {
                 heartbeat_interval: 60,
             }),
-        },
-    )
-    .await?;
+        })
+        .await?;
 
     loop {
         // Read a frame from the WebSocket connection

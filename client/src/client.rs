@@ -6,11 +6,10 @@ use fastwebsockets;
 use http_body_util;
 use hyper;
 use hyper_util;
-use std::sync::{Arc, Mutex};
 use tokio;
 
 use crate::session;
-use xyncer_share;
+use xyncer_share::{self, Websocket};
 
 // Tie Hyper's executor to Tokio's runtime
 struct SpawnExecutor;
@@ -77,8 +76,7 @@ pub async fn start_client(session: session::Session) -> anyhow::Result<()> {
 
                         match payload.op_code {
                             xyncer_share::OP::Hello => {
-                                xyncer_share::send_payload(
-                                    &mut websocket,
+                                websocket.send_payload(
                                     xyncer_share::Payload {
                                         op_code: xyncer_share::OP::Identify,
                                         event_name: xyncer_share::Event::None,
@@ -103,7 +101,7 @@ pub async fn start_client(session: session::Session) -> anyhow::Result<()> {
                 }
             },
             Some(payload) = session.payload_receiver.recv() => {
-                xyncer_share::send_payload(&mut websocket, payload).await?;
+                websocket.send_payload(payload).await?;
             }
         }
     }
