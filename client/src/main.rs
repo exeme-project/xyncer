@@ -1,3 +1,4 @@
+use flume;
 use simple_logger;
 
 mod client;
@@ -10,13 +11,12 @@ async fn main() {
         .init()
         .unwrap();
 
-    let (payload_sender, payload_receiver) =
-        tokio::sync::mpsc::channel::<xyncer_share::Payload>(100);
+    let (payload_sender, payload_receiver) = flume::unbounded();
 
     let session = session::Session {
         authenticated: false,
         connected: false,
-        error: anyhow::Error::msg(""),
+        error: None,
         password: String::new(),
         payload_sender: payload_sender,
         payload_receiver: payload_receiver,

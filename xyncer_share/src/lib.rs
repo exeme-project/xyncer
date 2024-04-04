@@ -7,10 +7,10 @@ use serde::{Deserialize, Serialize};
 pub mod payloads;
 
 pub trait Websocket {
-    async fn send_payload(
+    fn send_payload(
         &mut self,
         payload: Payload,
-    ) -> Result<(), fastwebsockets::WebSocketError>;
+    ) -> impl std::future::Future<Output = Result<(), fastwebsockets::WebSocketError>> + Send;
 }
 
 impl Websocket

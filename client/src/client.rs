@@ -1,6 +1,5 @@
 use std::future::Future;
 
-use anyhow;
 use bytes;
 use fastwebsockets;
 use http_body_util;
@@ -28,8 +27,9 @@ where
 // Connects to the specified WebSocket server
 async fn connect(
     server_url: &str,
-) -> anyhow::Result<
+) -> Result<
     fastwebsockets::FragmentCollector<hyper_util::rt::TokioIo<hyper::upgrade::Upgraded>>,
+    Box<dyn std::error::Error + Send + Sync>,
 > {
     // Connect to the WebSocket server
     let stream = tokio::net::TcpStream::connect(server_url).await?;
@@ -53,56 +53,81 @@ async fn connect(
     Ok(fastwebsockets::FragmentCollector::new(ws))
 }
 
-pub async fn start_client(session: session::Session) -> anyhow::Result<()> {
-    let mut websocket = connect(&session.server_address).await?;
+pub async fn start_client(
+    mut session_data: session::Session,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let mut websocket = connect(&session_data.server_address).await?;
 
-    let mut session = session;
-
-    session.connected = true;
-    session.error = anyhow::Error::msg("");
+    session_data.connected = true;
+    session_data.error = None;
 
     loop {
         tokio::select! {
-            // Handling incoming WebSocket messages
-            msg = websocket.read_frame() => {
-                let msg = msg.map_err(anyhow::Error::new)?;
+                // Handle incoming WebSocket messages
+                msg = websocket.read_frame() => {
+                    let msg = msg.map_err(|err| Box::new(err) as Box<dyn std::error::Error + Send + Sync>)?;
 
-                match msg.opcode {
-                    fastwebsockets::OpCode::Binary => {
-                        let bytes = msg.payload.to_owned();
-                        let payload: xyncer_share::Payload = rmp_serde::from_slice(&bytes).unwrap();
+                    match msg.opcode {
+                        fastwebsockets::OpCode::Binary => {
+                            let bytes = msg.payload.to_owned();
+                            let payload: xyncer_share::Payload = rmp_serde::from_slice(&bytes).unwrap();
 
-                        log::info!("Received payload: {:?}", payload);
+                            log::info!("Received payload: {:?}", payload);
 
-                        match payload.op_code {
-                            xyncer_share::OP::Hello => {
-                                websocket.send_payload(
-                                    xyncer_share::Payload {
-                                        op_code: xyncer_share::OP::Identify,
-                                        event_name: xyncer_share::Event::None,
-                                        data: xyncer_share::payloads::PayloadData::Identify(
-                                            xyncer_share::payloads::IdentifyData {
-                                                passphrase: String::from("password"),
-                                            },
-                                        ),
-                                    },
-                                )
-                                .await?;
-                            }
-                            _ => {
-                                unimplemented!();
+                            match payload.op_code {
+                                // Start the heartbeat sender
+                                xyncer_share::OP::Hello => {
+                                    let heartbeat_interval = match payload.data {
+                                        xyncer_share::payloads::PayloadData::Hello(data) => {
+                                            data.heartbeat_interval
+                                        }
+                                        _ => {
+                                            unimplemented!();
+                                        }
+                                    };
+
+                                    let session_data = session_data.clone();
+
+                                    tokio::spawn(async move {
+                                        loop {
+                                            tokio::time::sleep(tokio::time::Duration::from_secs(heartbeat_interval.into())).await;
+
+                                            if session_data.connected {
+                                                session_data.payload_sender.send(xyncer_share::Payload {
+                                                    op_code: xyncer_share::OP::Heartbeat,
+                                                    event_name: xyncer_share::Event::None,
+                                                    data: xyncer_share::payloads::PayloadData::Heartbeat,
+                                                }).unwrap();
+                                            } else {
+                                                break;
+                                            }
+                                        }
+                                    });
+                                }
+                                _ => {
+                                    unimplemented!();
+                                }
                             }
                         }
+                        fastwebsockets::OpCode::Close => {
+                            break;
+                        }
+                        _ => unimplemented!(),
                     }
-                    fastwebsockets::OpCode::Close => {
-                        break;
+                },
+                // Handle outgoing WebSocket messages
+                payload_result = session_data.payload_receiver.recv_async() => {
+                    match payload_result {
+                        Ok(payload) => {
+                            if let Err(e) = websocket.send_payload(payload).await {
+                                log::error!("Error sending WebSocket payload: {}", e);
+                            }
+                        },
+                        Err(e) => {
+                            log::error!("WebSocket payload sender channel error: {}", e);
+                        },
                     }
-                    _ => unimplemented!(),
-                }
-            },
-            Some(payload) = session.payload_receiver.recv() => {
-                websocket.send_payload(payload).await?;
-            }
+                },
         }
     }
 
