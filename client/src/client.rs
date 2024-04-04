@@ -60,11 +60,17 @@ pub async fn start_client(
     payload_receiver: flume::Receiver<xyncer_share::Payload>,
     payload_sender: flume::Sender<xyncer_share::Payload>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // Obtain a write lock on the session data
-    let mut session_data = session_data_guard.write().await;
+    // Obtain a read lock on the session data
+    let session_data = session_data_guard.read().await;
 
     // Connect to the WebSocket server
     let mut websocket = connect(&session_data.server_address).await?;
+
+    // Drop the read lock on the session data
+    drop(session_data);
+
+    // Obtain a write lock on the session data
+    let mut session_data = session_data_guard.write().await;
 
     // Update the session data
     session_data.connected = true;
