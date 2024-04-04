@@ -1,5 +1,4 @@
 use eframe::egui;
-use pollster::FutureExt as _;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -34,7 +33,7 @@ impl Default for Xyncer {
 
 impl eframe::App for Xyncer {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let mut session_data = self.session_data_guard.write().block_on();
+        let mut session_data = self.session_data_guard.try_write().unwrap();
 
         egui::CentralPanel::default().show(ctx, |ui| {
             if session_data.authenticated {
