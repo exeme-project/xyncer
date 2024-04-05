@@ -13,21 +13,21 @@ pub struct IdentifyData {
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug)]
-enum ErrorCode {
+pub enum ErrorCode {
     UnknownError,
     UnknownOP,
     DecodeError,
     AuthenticationFailed,
+    SessionTimeout,
 }
 
 impl ErrorCode {
-    fn populate(&self) -> InvalidSessionData {
+    pub fn populate(&self) -> InvalidSessionData {
         match self {
             ErrorCode::UnknownError => InvalidSessionData {
                 code: *self,
                 description: "Unknown error".to_string(),
                 explanation: "We're not sure what went wrong. Try reconnecting?".to_string(),
-                reconnect: true,
             },
             ErrorCode::UnknownOP => InvalidSessionData {
                 code: *self,
@@ -35,7 +35,6 @@ impl ErrorCode {
                 explanation: "The server
                 received an unknown OP code. Try reconnecting?"
                     .to_string(),
-                reconnect: true,
             },
             ErrorCode::DecodeError => InvalidSessionData {
                 code: *self,
@@ -43,7 +42,6 @@ impl ErrorCode {
                 explanation: "The server
                 received an invalid payload. Try reconnecting?"
                     .to_string(),
-                reconnect: true,
             },
             ErrorCode::AuthenticationFailed => InvalidSessionData {
                 code: *self,
@@ -51,7 +49,11 @@ impl ErrorCode {
                 explanation: "The server
                 received an invalid passphrase too many times."
                     .to_string(),
-                reconnect: false,
+            },
+            ErrorCode::SessionTimeout => InvalidSessionData {
+                code: *self,
+                description: "Session timeout".to_string(),
+                explanation: "You didn't send a heartbeat in time.".to_string(),
             },
         }
     }
@@ -62,7 +64,6 @@ pub struct InvalidSessionData {
     code: ErrorCode,
     description: String,
     explanation: String,
-    reconnect: bool,
 }
 
 // Hello data

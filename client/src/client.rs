@@ -135,6 +135,16 @@ pub async fn start_client(
                                         }
                                     });
                                 },
+                                // Server requesting a heartbeat
+                                xyncer_share::OP::Heartbeat => {
+                                    if let Err(e) = payload_sender.send(xyncer_share::Payload {
+                                        op_code: xyncer_share::OP::Heartbeat,
+                                        event_name: xyncer_share::Event::None,
+                                        data: xyncer_share::payloads::PayloadData::Heartbeat,
+                                    }) {
+                                        log::error!("Error sending heartbeat in response to heartbeat request: {}", e);
+                                    }
+                                },
                                 xyncer_share::OP::HeartbeatAck => {},
                                 _ => {
                                     unimplemented!();

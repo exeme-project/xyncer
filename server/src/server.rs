@@ -45,37 +45,88 @@ async fn handle_connection(
         })
         .await?;
 
+    let mut last_heartbeat = tokio::time::Instant::now();
+    let mut requested_heartbeat_from_client = false;
+
     loop {
-        // Read a frame from the WebSocket connection
-        let msg = websocket.read_frame().await?;
+        let mut sleep_duration = tokio::time::Duration::from_secs(0);
 
-        match msg.opcode {
-            fastwebsockets::OpCode::Binary => {
-                let bytes = msg.payload.to_owned();
-                let payload: xyncer_share::Payload = rmp_serde::from_slice(&bytes).unwrap();
+        // Make sure we have not gone past the waiting time (5 more seconds as a jitter)
+        if last_heartbeat.elapsed() <= tokio::time::Duration::from_secs(65) {
+            // If we haven't gone past the waiting time, calculate the remaining time
+            sleep_duration = tokio::time::Duration::from_secs(65) - last_heartbeat.elapsed();
+        }
 
-                log::info!("Received payload: {:?}", payload);
+        tokio::select! {
+            // Check if we have not received a heartbeat
+            _ = tokio::time::sleep(sleep_duration) => {
+                if requested_heartbeat_from_client {
+                    // Close the connection because the client did not respond to the heartbeat request
+                    log::warn!("Client did not respond to heartbeat request, closing connection");
 
-                match payload.op_code {
-                    xyncer_share::OP::Heartbeat => {
-                        websocket
-                            .send_payload(xyncer_share::Payload {
-                                op_code: xyncer_share::OP::HeartbeatAck,
-                                event_name: xyncer_share::Event::None,
-                                data: xyncer_share::payloads::PayloadData::HeartbeatAck,
-                            })
-                            .await?;
-                    }
-                    _ => {
-                        unimplemented!()
-                    }
+                    websocket
+                        .send_payload(xyncer_share::Payload {
+                            op_code: xyncer_share::OP::InvalidSession,
+                            event_name: xyncer_share::Event::None,
+                            data: xyncer_share::payloads::PayloadData::InvalidSession(xyncer_share::payloads::ErrorCode::SessionTimeout.populate()),
+                        })
+                        .await?;
+
+                    websocket.close().await?;
+
+                    break;
+                } else {
+                    // Request a heartbeat from the client
+                    requested_heartbeat_from_client = true;
+
+                    // Give the client a grace period to respond to the heartbeat request
+                    last_heartbeat = tokio::time::Instant::now();
+
+                    websocket
+                        .send_payload(xyncer_share::Payload {
+                            op_code: xyncer_share::OP::Heartbeat,
+                            event_name: xyncer_share::Event::None,
+                            data: xyncer_share::payloads::PayloadData::Heartbeat,
+                        })
+                        .await?;
                 }
             }
-            fastwebsockets::OpCode::Text => {
-                unimplemented!();
+            // Check for an incoming message
+            msg = websocket.read_frame() => {
+                let msg = msg?;
+
+                match msg.opcode {
+                    fastwebsockets::OpCode::Binary => {
+                        let bytes = msg.payload.to_owned();
+                        let payload: xyncer_share::Payload = rmp_serde::from_slice(&bytes).unwrap();
+
+                        log::info!("Received payload: {:?}", payload);
+
+                        match payload.op_code {
+                            xyncer_share::OP::Heartbeat => {
+                                last_heartbeat = tokio::time::Instant::now();
+                                requested_heartbeat_from_client = false;
+
+                                websocket
+                                    .send_payload(xyncer_share::Payload {
+                                        op_code: xyncer_share::OP::HeartbeatAck,
+                                        event_name: xyncer_share::Event::None,
+                                        data: xyncer_share::payloads::PayloadData::HeartbeatAck,
+                                    })
+                                    .await?;
+                            }
+                            _ => {
+                                unimplemented!()
+                            }
+                        }
+                    }
+                    fastwebsockets::OpCode::Text => {
+                        unimplemented!();
+                    }
+                    fastwebsockets::OpCode::Close => break,
+                    _ => {}
+                }
             }
-            fastwebsockets::OpCode::Close => break,
-            _ => {}
         }
     }
 

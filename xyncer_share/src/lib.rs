@@ -11,6 +11,10 @@ pub trait Websocket {
         &mut self,
         payload: Payload,
     ) -> impl std::future::Future<Output = Result<(), fastwebsockets::WebSocketError>> + Send;
+
+    fn close(
+        &mut self,
+    ) -> impl std::future::Future<Output = Result<(), fastwebsockets::WebSocketError>> + Send;
 }
 
 impl Websocket
@@ -26,6 +30,11 @@ impl Websocket
             fastwebsockets::Payload::Owned(rmp_serde::to_vec(&payload).unwrap()),
         ))
         .await
+    }
+
+    async fn close(&mut self) -> Result<(), fastwebsockets::WebSocketError> {
+        self.write_frame(fastwebsockets::Frame::close_raw(vec![].into()))
+            .await
     }
 }
 
