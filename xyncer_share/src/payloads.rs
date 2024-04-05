@@ -80,4 +80,5 @@ pub enum PayloadData {
     ReIdentify,
     InvalidSession(InvalidSessionData),
     Hello(HelloData),
+    HeartbeatAck,
 }

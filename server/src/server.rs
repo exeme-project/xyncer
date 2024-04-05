@@ -55,6 +55,21 @@ async fn handle_connection(
                 let payload: xyncer_share::Payload = rmp_serde::from_slice(&bytes).unwrap();
 
                 log::info!("Received payload: {:?}", payload);
+
+                match payload.op_code {
+                    xyncer_share::OP::Heartbeat => {
+                        websocket
+                            .send_payload(xyncer_share::Payload {
+                                op_code: xyncer_share::OP::HeartbeatAck,
+                                event_name: xyncer_share::Event::None,
+                                data: xyncer_share::payloads::PayloadData::HeartbeatAck,
+                            })
+                            .await?;
+                    }
+                    _ => {
+                        unimplemented!()
+                    }
+                }
             }
             fastwebsockets::OpCode::Text => {
                 unimplemented!();

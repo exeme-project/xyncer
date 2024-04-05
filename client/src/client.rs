@@ -134,7 +134,8 @@ pub async fn start_client(
                                             tokio::time::sleep(tokio::time::Duration::from_secs(heartbeat_interval.into())).await;
                                         }
                                     });
-                                }
+                                },
+                                xyncer_share::OP::HeartbeatAck => {},
                                 _ => {
                                     unimplemented!();
                                 }
