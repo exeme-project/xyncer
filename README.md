@@ -1,5 +1,45 @@
-# Xyncer [![wakatime](https://wakatime.com/badge/user/b4317b02-0c6d-457b-82a4-a448b8a8d1df/project/04bfbe26-c39e-4d20-9b80-8c7e2ed123e3.svg)](https://wakatime.com/badge/user/b4317b02-0c6d-457b-82a4-a448b8a8d1df/project/04bfbe26-c39e-4d20-9b80-8c7e2ed123e3)
+# xyncer
 
-- [Xyncer ](#xyncer-)
+[![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://lbesson.mit-license.org/)
 
-Run Windows apps on Linux, as if they were native applications.
+<!-- [![Release Downloads](https://img.shields.io/github/downloads/exeme-project/xyncer/total.svg)](https://github.com/exeme-project/xyncer/releases) -->
+
+- [xyncer](#xyncer)
+  - [Installation](#installation)
+    - [Using pre-built binaries](#using-pre-built-binaries)
+    - [Running from source](#running-from-source)
+  - [Acknowledgements](#acknowledgements)
+
+xyncer (pronounced as _**/ˈzɪn.kər/**_) makes it easy to run Windows apps on Linux, as if they were native applications. 
+
+## Installation
+
+### Using pre-built binaries
+
+Pre-built binaries are made available for every `x.x` release. If you want more frequent updates, then [run from source](#running-from-source). Download the binary for your OS from the [latest release](https://github.com/exeme-project/xyncer/releases/latest). There are quick links at the top of every release for popular OSes.
+
+> [!IMPORTANT]\
+> If you are on **Linux or macOS**, you may have to execute **`chmod +x path_to_binary`** in a shell to be able to run the binary.
+
+### Running from source
+
+Use this method if none of the pre-built binaries work on your system, or if you want more frequent updates.
+
+1. Make sure you have [Rust](https://rust-lang.org) installed. If you do not have rust installed, you can install it from [here](https://rustup.rs/).
+2. Download and extract the repository from [here](https://github.com/exeme-project/xyncer/archive/refs/heads/master.zip). Alternatively, you can clone the repository with [Git](https://git-scm.com/) by running `git clone https://github.com/exeme-project/xyncer` in a terminal.
+3. Navigate into the `/src` directory of your clone of this repository.
+4. Run the command `cargo build --release`.
+5. The compiled binary is in the `target/release` directory, named `main.exe` if you are on Windows, else `main`.
+
+## Acknowledgements
+
+Xyncer is inspired by many projects, namely:
+
+- [**Cassowary**](https://github.com/casualsnek/cassowary).
+- [**WinApps**](https://github.com/winapps-org/winapps).
+
+Xyncer is also made possible by the following projects:
+
+- [**Fastwebsockets**](https://github.com/denoland/fastwebsockets) - A fast WebSocket implementation for Rust.
+- [**Tokio**](https://tokio.rs/) - An asynchronous runtime for Rust.
+- [**XCap**](https://crates.io/crates/xcap) - A cross-platform screen capture library.
