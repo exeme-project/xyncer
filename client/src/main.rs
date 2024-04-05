@@ -13,7 +13,7 @@ async fn main() -> Result<(), eframe::Error> {
         .unwrap();
 
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([200.0, 100.0]),
+        viewport: egui::ViewportBuilder::default().with_inner_size([300.0, 400.0]),
         ..Default::default()
     };
 

@@ -108,14 +108,18 @@ pub async fn start_client(
                                     let session_data_guard_cloned = session_data_guard.clone();
 
                                     tokio::spawn(async move {
-                                        let session_data = session_data_guard_cloned.read().await;
-
                                         loop {
+                                            // Obtain a read lock on the session data
+                                            let session_data = session_data_guard_cloned.read().await;
+
                                             if !session_data.connected {
                                                 log::info!("Stopping heartbeat (not connected)");
 
                                                 break;
                                             }
+
+                                            // Drop the read lock on the session data, ASAP to avoid deadlocks
+                                            drop(session_data);
 
                                             if let Err(e) = payload_sender_cloned.send(xyncer_share::Payload {
                                                 op_code: xyncer_share::OP::Heartbeat,
