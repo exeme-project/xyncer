@@ -6,7 +6,17 @@
 version: 2
 updates:
   - package-ecosystem: "cargo" # See documentation for possible values
-    directory: "/" # Location of package manifests
+    directory: "/client" # Location of package manifests
+    schedule:
+      interval: daily
+
+    - package-ecosystem: "cargo" # See documentation for possible values
+    directory: "/server" # Location of package manifests
+    schedule:
+      interval: daily
+
+    - package-ecosystem: "cargo" # See documentation for possible values
+    directory: "/xyncer_share" # Location of package manifests
     schedule:
       interval: daily
 
