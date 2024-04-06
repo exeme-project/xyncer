@@ -1,8 +1,7 @@
 # xyncer
 
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://lbesson.mit-license.org/)
-
-<!-- [![Release Downloads](https://img.shields.io/github/downloads/exeme-project/xyncer/total.svg)](https://github.com/exeme-project/xyncer/releases) -->
+[![Release Downloads](https://img.shields.io/github/downloads/exeme-project/xyncer/total.svg)](https://github.com/exeme-project/xyncer/releases)
 
 - [xyncer](#xyncer)
   - [Installation](#installation)
