@@ -13,7 +13,7 @@
 xyncer (pronounced as _**/ˈzɪn.kər/**_) makes it easy to run Windows apps on Linux, as if they were native applications. 
 
 > [!CAUTION]
-> Xyncer is in **pre-alpha**. I aim to have a alpha build out within around a week, but for now proceed with caution.
+> Xyncer is in **pre-alpha**, proceed with caution.
 
 ## Installation
 
