@@ -15,7 +15,7 @@ hyper = "1.2.0"
 hyper-util = { version = "0.1.3", features = ["tokio"] }
 log = "0.4.21"
 rmp-serde = "1.1.2"
-simple_logger = "4.3.3"
+simple_logger = "5.0.0"
 tokio = { version = "1.37.0", features = ["full"] }
 
 xyncer_share = { path = "../xyncer_share" }
