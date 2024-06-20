@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 bytes = "1.6.0"
 eframe = "0.27.2"
-fastwebsockets = { version = "0.7.1", features = ["upgrade"] }
+fastwebsockets = { version = "0.8.0", features = ["upgrade"] }
 flume = "0.11.0"
 http-body-util = "0.1.1"
 hyper = "1.2.0"
